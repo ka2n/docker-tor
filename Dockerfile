@@ -1,22 +1,18 @@
-FROM debian:jessie
+FROM alpine:3.4
 MAINTAINER David Personette <dperson@gmail.com>
 
-# Install tor and privoxy
-RUN export DEBIAN_FRONTEND='noninteractive' && \
-    apt-key adv --keyserver pgp.mit.edu --recv-keys \
-                A3C4F0F979CAA22CDBA8F512EE8CBC9E886DDD89 && \
-    /bin/echo -n "deb http://deb.torproject.org/torproject.org jessie main" \
-                >>/etc/apt/sources.list && \
-    apt-get update -qq && \
-    apt-get install -qqy --no-install-recommends tor privoxy \
-                $(apt-get -s dist-upgrade|awk '/^Inst.*ecurity/ {print $2}') &&\
-    sed -i 's|^\(accept-intercepted-requests\) .*|\1 1|' /etc/privoxy/config &&\
+WORKDIR /
+
+RUN apk --update --no-cache --repository http://dl-3.alpinelinux.org/alpine/edge/community/ add ca-certificates openssl tor privoxy bash && \
+	sed -i 's|^\(accept-intercepted-requests\) .*|\1 1|' /etc/privoxy/config &&\
     sed -i 's|localhost:8118|0.0.0.0:8118|' /etc/privoxy/config && \
+    sed -i 's|127.0.0.1:8118|0.0.0.0:8118|' /etc/privoxy/config && \
     sed -i 's|^\(logdir\) .*|\1 /dev|' /etc/privoxy/config && \
     sed -i 's|^\(logfile\) .*|\1 stdout|' /etc/privoxy/config && \
     sed -i '/forward *localhost\//a forward-socks5t / 127.0.0.1:9050 .' \
-                /etc/privoxy/config && \
-    sed -i '/^forward-socks5t \//a forward 172.16.*.*/ .' /etc/privoxy/config&&\
+                /etc/privoxy/config&& \
+                sed -i '/^forward-socks5t \//a forward 172.16.*.*/ .' \
+                /etc/privoxy/config&&\
     sed -i '/^forward 172\.16\.\*\.\*\//a forward 172.17.*.*/ .' \
                 /etc/privoxy/config && \
     sed -i '/^forward 172\.17\.\*\.\*\//a forward 172.18.*.*/ .' \
@@ -63,7 +59,7 @@ RUN export DEBIAN_FRONTEND='noninteractive' && \
     echo 'CookieAuthFile /etc/tor/run/control.authcookie' >>/etc/tor/torrc && \
     echo 'DataDirectory /var/lib/tor' >>/etc/tor/torrc && \
     echo 'RunAsDaemon 0' >>/etc/tor/torrc && \
-    echo 'User debian-tor' >>/etc/tor/torrc && \
+    echo 'User tor' >>/etc/tor/torrc && \
     echo 'AutomapHostsOnResolve 1' >>/etc/tor/torrc && \
     echo 'ExitPolicy reject *:*' >>/etc/tor/torrc && \
     echo 'RelayBandwidthRate 10 KB' >>/etc/tor/torrc && \
@@ -73,15 +69,12 @@ RUN export DEBIAN_FRONTEND='noninteractive' && \
     echo 'SocksPort 0.0.0.0:9050 IsolateDestAddr' >>/etc/tor/torrc && \
     echo 'TransPort 9040' >>/etc/tor/torrc && \
     mkdir -p /etc/tor/run && \
-    chown -Rh debian-tor. /var/lib/tor /etc/tor/run && \
-    chmod 0750 /etc/tor/run && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* /tmp/*
-    #echo 'Log notice file /dev/stdout' >>/etc/tor/torrc && \
-COPY torproxy.sh /usr/bin/
-
+    chown -Rh tor. /var/lib/tor /etc/tor/run && \
+    chmod 0750 /etc/tor/run
+  
+COPY torproxy.sh /
+  
 EXPOSE 8118 9050 9051
-
 VOLUME ["/etc/tor", "/var/lib/tor"]
 
-ENTRYPOINT ["torproxy.sh"]
+CMD ["/torproxy.sh"]

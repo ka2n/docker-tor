@@ -106,10 +106,10 @@ shift $(( OPTIND - 1 ))
 [[ "${TZ:-""}" ]] && timezone "$TZ"
 [[ "${SERVICE:-""}" ]] && eval hidden_service \
             $(sed 's/^\|$/"/g; s/;/" "/g' <<< $SERVICE)
-[[ "${USERID:-""}" =~ ^[0-9]+$ ]] && usermod -u $USERID -o debian-tor
-[[ "${GROUPID:-""}" =~ ^[0-9]+$ ]] && groupmod -g $GROUPID -o debian-tor
+[[ "${USERID:-""}" =~ ^[0-9]+$ ]] && usermod -u $USERID -o tor
+[[ "${GROUPID:-""}" =~ ^[0-9]+$ ]] && groupmod -g $GROUPID -o tor
 
-chown -Rh debian-tor. /var/lib/tor /var/log/tor 2>&1 | grep -iv 'Read-only' || :
+chown -Rh tor. /var/lib/tor /var/log/tor 2>&1 | grep -iv 'Read-only' || :
 
 if [[ $# -ge 1 && -x $(which $1 2>&-) ]]; then
     exec "$@"
